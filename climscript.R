@@ -1,6 +1,8 @@
 ## Removing previous object in the R-session
 rm(list = ls(all= TRUE))
 setwd("~/uio/phenology")
+load("~/uio/phenology/01.12.climateworkspace.RData")
+
 ## loding extra libraries I need for the following analyses
 library(glmmADMB)
 library(splines)
@@ -202,23 +204,25 @@ legend(15, 60, c("Raw data", "Temperature model", "Optimal temperature"),
         col = c("black", "black", "red"),
         pch = c(16,NA,8),
         pt.cex = c(0.7, NA, 1),
-        bg = "white"                        
+        bg = "white"  ,
+        bty = "n"
 )
 dev.copy2eps(device=x11,
-#family=c("/home/lars/arial.afm",
-#"/home/lars/arialbd.afm",
-#"/home/lars/ariali.afm",
-#"/home/lars/arialbi.afm"),
-file = "~/uio/phenology/figures/temp.eps",
+file = "~/uio/phenology/figures/Figure3.eps",
 paper="special",
         width=10,
         height=7,
-    #    horizontal=FALSE
      	)
+dev.copy2pdf(device=x11,
+file = "~/uio/phenology/figures/Figure3.pdf",
+paper="special",
+        width=10,
+        height=7,
+       )
+#dev.off()  ## Closes the plotting device. Do not use with R-studio
 
 
-
-## Fill into paper!!
+## Fill into paper.
 
 
 #### Next step is to predict the model, and plot the trend data that from weather model ####
@@ -254,22 +258,23 @@ legend(attt[6], 4, c("Low 2011", "Low 2012", "High 2011", "High 2012"),
         text.col = "black",
         lty = c(2, 3, 2,3), 
        col = c("black", "black", "red", "red"),
-        #       bty="n",
+              bty="n",
         bg = "white"                        
 )
 dev.copy2eps(device=x11,
-#family=c("/home/lars/arial.afm",
-#"/home/lars/arialbd.afm",
-#"/home/lars/ariali.afm",
-#"/home/lars/arialbi.afm"),
 file = "~/uio/phenology/figures/trend.no.weather.eps",
 paper="special",
         width=10,
         height=7,
-    #    horizontal=FALSE
 		)
+dev.copy2eps(device=x11,
+file = "~/uio/phenology/figures/trend.no.weather.pdf",
+paper="special",
+        width=10,
+        height=7,
+  	)
 
-dev.off()
+#dev.off() ## Closes the plotting device. Do not use with R-studio
 
 
 model.best = M13A
@@ -291,4 +296,3 @@ lines(exp(newdat.M23[newdat.M23$year.x=="2012",]$tot+intercept)~newdat.M23[newda
 
 
 save(list=ls(all=T), file="~/uio/phenology/01.12.climateworkspace.RData")
-load("~/uio/phenology/01.12.climateworkspace.RData")
