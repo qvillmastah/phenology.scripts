@@ -1,6 +1,6 @@
 ## Removing previous object in the R-session
 rm(list = ls(all= TRUE))
-
+setwd("~/uio/phenology")
 ## loding extra libraries I need for the following analyses
 library(glmmADMB)
 library(splines)
@@ -154,10 +154,15 @@ AIC(M26 <- glmmadmb(tot ~ year.x + Hum + poly(Temp,2) + alt.cat + datodata + (1|
 ## The model including alt.cat and the interaction with ns(date, df=2) is the best model based on AIC
 ## Checking for residual trend
 
+residualer = resid(M23)   ## Extracting scaled pearson residuals from the nest best model
+## See if there are any trends in the residuals
+summary(lm(residualer ~ datodata * alt.cat, data = phen))  ## linear time
+summary(lm(residualer ~ ns(datodata, df = 2) * alt.cat, data = phen))  ## Patterns is still there.. 
+
 residualer = resid(M23)   ## Extracting scaled pearson residuals from the best model
 ## See if there are any trends in the residuals
 summary(lm(residualer ~ datodata * alt.cat, data = phen))  ## linear time
-summary(lm(residualer ~ ns(datodata, df = 2) * alt.cat, data = phen))  ## Patterns is lost - all is well
+summary(lm(residualer ~ ns(datodata, df = 2) * alt.cat, data = phen))  ## Patterns is lost - all is well 
 
 #########################################################
 ######################################################### 
@@ -165,9 +170,9 @@ summary(lm(residualer ~ ns(datodata, df = 2) * alt.cat, data = phen))  ## Patter
 
 # Try to remove some more weather variables to see if the time trend removes significance in any variables
 AIC(M26 <- glmmadmb(tot ~ year.x + Hum + Temp + alt.cat * ns(datodata, df=2) + (1|uniktrans), family="nbinom", data= phen, zeroInflation =T)) ## AIC= 5848.12
-AIC(M27 <- glmmadmb(tot ~ year.x + poly(Temp,2) + alt.cat * ns(datodata, df=2) + (1|uniktrans), family="nbinom", data= phen, zeroInflation =T)) ## AIC= 
-AIC(M28 <- glmmadmb(tot ~ Hum + poly(Temp,2) + alt.cat * ns(datodata, df=2) + (1|uniktrans), family="nbinom", data= phen, zeroInflation =T)) ## AIC= 
-AIC(M29 <- glmmadmb(tot ~ year.x + Hum + alt.cat * ns(datodata, df=2) + (1|uniktrans), family="nbinom", data= phen, zeroInflation =T)) ## AIC= 
+AIC(M27 <- glmmadmb(tot ~ year.x + poly(Temp,2) + alt.cat * ns(datodata, df=2) + (1|uniktrans), family="nbinom", data= phen, zeroInflation =T)) ## AIC= 5838.6
+AIC(M28 <- glmmadmb(tot ~ Hum + poly(Temp,2) + alt.cat * ns(datodata, df=2) + (1|uniktrans), family="nbinom", data= phen, zeroInflation =T)) ## AIC= 5848.1
+AIC(M29 <- glmmadmb(tot ~ year.x + Hum + alt.cat * ns(datodata, df=2) + (1|uniktrans), family="nbinom", data= phen, zeroInflation =T)) ## AIC= 5849.44
 ## Humidity must not out, and the new best model is still M23
 
 
@@ -175,28 +180,96 @@ AIC(M29 <- glmmadmb(tot ~ year.x + Hum + alt.cat * ns(datodata, df=2) + (1|unikt
 residualer = resid(M27)   ## Extracting scaled pearson residuals from the best model
 ## See if there are any trends in the residuals
 summary(lm(residualer ~ datodata * alt.cat, data = phen))  ## linear time
-summary(lm(residualer ~ ns(datodata, df = 2) * alt.cat, data = phen))  ## Patterns is lost - all is well
+summary(lm(residualer ~ ns(datodata, df = 2) * alt.cat, data = phen))  ## Patterns is still lost - all is well
 
 
 #Best model is:
-     summary(M27)
-## Fill into paper!!
+AIC(M27.2 <- glmmadmb(tot ~ year.x + poly(Temp, 2, raw = T) + alt.cat * ns(datodata, df=2) + (1|uniktrans), family="nbinom", data= phen, zeroInflation =T)) ## AIC= 5838.6     
+summary(M27.2)
 
-#save(list=ls(all=T), file="29.11climateworkspace.RData")
+## Plotting the temperature effect to see if it looks sensible.
+plot(phen$tot ~ phen$temp, main="Tick activity as an effect of Temperaure", xlab="Temperature", ylab="Tick abundance", las=1, pch = 16, cex = 0.7)
+curve(exp( 0.23013*x - 0.00664*(x^2)), add=T, lty = 2)
+## Optimal temperature after derivation f(x) = a + bx - cx^2 -> f'(x) = b - 2cx
+## Optimal temperature is: b -2cx = 0 -> -2cx = -b -> x = -b/-2c
+## x. opt = 0.23/(-0.0066*2)
+opt.Temp = -M27.2$b[3]/(M27.2$b[4]*2)  ## Optimal temperature from the model table
+#Adding optimum
+points(opt.Temp, exp( 0.23013*opt.Temp - 0.00664*(opt.Temp^2)), pch = 8, col = "red")
+legend(15, 60, c("Raw data", "Temperature model", "Optimal temperature"),
+        text.col = "black",
+        lty = c(NA, 2, NA), 
+        col = c("black", "black", "red"),
+        pch = c(16,NA,8),
+        pt.cex = c(0.7, NA, 1),
+        bg = "white"                        
+)
+dev.copy2eps(device=x11,
+#family=c("/home/lars/arial.afm",
+#"/home/lars/arialbd.afm",
+#"/home/lars/ariali.afm",
+#"/home/lars/arialbi.afm"),
+file = "~/uio/phenology/figures/temp.eps",
+paper="special",
+        width=10,
+        height=7,
+    #    horizontal=FALSE
+     	)
+
+
+
+## Fill into paper!!
 
 
 #### Next step is to predict the model, and plot the trend data that from weather model ####
-     
-model.best = 
-newdat.Mspline <- data.frame(expand.grid(datodata = c(min(datodata):max(datodata)), alt.cat = levels(phen$alt.cat), year.x=c(2011, 2012))) 
+model.best = M27
+newdat.Mspline <- data.frame(expand.grid(datodata = c(min(datodata):max(datodata)), alt.cat = levels(phen$alt.cat), year.x=c("2011","2012"), Temp = opt.Temp)) 
 mm <- model.matrix(delete.response(terms(model.best)),newdat.Mspline)
-newdat.Mspline$tot <-(mm %*% fixef(model.best))
+newdat.Mspline$tot <-exp((mm %*% fixef(model.best)))
+## Find the lowest values with active ticks
 
-plot(newdat.Mspline[newdat.Mspline$alt.cat == "low",]$tot~newdat.Mspline[newdat.Mspline$alt.cat == "low",]$datodata, type ="n")
+firstdatodata2011 = min(datodata[phen$tot>0&phen$year.x=="2011"])
+lastdatodata2011  = max(datodata[phen$tot>0&phen$year.x=="2011"])
+firstdatodata2012 = min(datodata[phen$tot>0&phen$year.x=="2012"])
+lastdatodata2012  = max(datodata[phen$tot>0&phen$year.x=="2012"])
+## For high elevated transects
+firstdatodataH2011 = min(datodata[phen$tot>0&phen$year.x=="2011"&phen$alt.cat=="high"])
+lastdatodataH2011  = max(datodata[phen$tot>0&phen$year.x=="2011"&phen$alt.cat=="high"])
+firstdatodataH2012 = min(datodata[phen$tot>0&phen$year.x=="2012"&phen$alt.cat=="high"])
+lastdatodataH2012  = max(datodata[phen$tot>0&phen$year.x=="2012"&phen$alt.cat=="high"])
+
+plot(newdat.Mspline[newdat.Mspline$alt.cat == "low"&newdat.Mspline$year.x == "2011",]$tot~newdat.Mspline[newdat.Mspline$alt.cat == "low"
+&newdat.Mspline$year.x == "2011",]$datodata, type ="n", ylim = c(0,5), main ="Time trend when accounted for weather variables", ylab = "tick counts", xlab="", xaxt = "n", las = 1, bty="n")
+attt = c(90,120,151, 181, 212, 243, 273, 304)
+labs=c("Apr","May","Jun","Jul","Aug","Sep","Oct", "Nov")
+axis(1, at = attt, labels = labs, col="black")
+
 #points(newdat.Mspline[newdat.Mspline$alt.cat == "low",]$tot~newdat.Mspline[newdat.Mspline$alt.cat == "low",]$datodata)
-lines(newdat.Mspline[newdat.Mspline$alt.cat == "low",]$tot~newdat.Mspline[newdat.Mspline$alt.cat == "low",]$datodata)
+lines(newdat.Mspline[newdat.Mspline$alt.cat == "low"&newdat.Mspline$year.x == "2011"&newdat.Mspline$datodata>firstdatodata2011&newdat.Mspline$datodata<lastdatodata2011,]$tot~newdat.Mspline[newdat.Mspline$alt.cat == "low"&newdat.Mspline$year.x == "2011" &newdat.Mspline$datodata>firstdatodata2011&newdat.Mspline$datodata<lastdatodata2011,]$datodata, lty = 2)
+lines(newdat.Mspline[newdat.Mspline$alt.cat == "low"&newdat.Mspline$year.x == "2012"&newdat.Mspline$datodata>firstdatodata2012 &newdat.Mspline$datodata<lastdatodata2012,]$tot~newdat.Mspline[newdat.Mspline$alt.cat == "low"&newdat.Mspline$year.x == "2012"&newdat.Mspline$datodata>firstdatodata2012&newdat.Mspline$datodata<lastdatodata2012,]$datodata, lty = 3)
+lines(newdat.Mspline[newdat.Mspline$alt.cat == "high"&newdat.Mspline$year.x == "2011"&newdat.Mspline$datodata>firstdatodataH2011&newdat.Mspline$datodata<lastdatodataH2011,]$tot~newdat.Mspline[newdat.Mspline$alt.cat == "high"&newdat.Mspline$year.x == "2011"&newdat.Mspline$datodata>firstdatodataH2011&newdat.Mspline$datodata<lastdatodataH2011,]$datodata, lty = 2, col = "red")
+lines(newdat.Mspline[newdat.Mspline$alt.cat == "high"&newdat.Mspline$year.x == "2012"&newdat.Mspline$datodata>firstdatodataH2012&newdat.Mspline$datodata<lastdatodataH2012,]$tot~newdat.Mspline[newdat.Mspline$alt.cat == "high"&newdat.Mspline$year.x == "2012"&newdat.Mspline$datodata>firstdatodataH2012&newdat.Mspline$datodata<lastdatodataH2012,]$datodata, lty = 3, col ="red")
 
+legend(attt[6], 4, c("Low 2011", "Low 2012", "High 2011", "High 2012"),
+        text.col = "black",
+        lty = c(2, 3, 2,3), 
+       col = c("black", "black", "red", "red"),
+        #       bty="n",
+        bg = "white"                        
+)
+dev.copy2eps(device=x11,
+#family=c("/home/lars/arial.afm",
+#"/home/lars/arialbd.afm",
+#"/home/lars/ariali.afm",
+#"/home/lars/arialbi.afm"),
+file = "~/uio/phenology/figures/trend.no.weather.eps",
+paper="special",
+        width=10,
+        height=7,
+    #    horizontal=FALSE
+		)
 
+dev.off()
 
 
 model.best = M13A
@@ -217,212 +290,5 @@ lines(exp(newdat.M23[newdat.M23$year.x=="2012",]$tot+intercept)~newdat.M23[newda
 #curve(exp( 20 + 8.3772*x - 13.6844*(x^2)), add=T, col = "red")
 
 
-
-save(list=ls(all=T), file="14.11climateworkspace.RData")
-
-
-M0.11 = glmmadmb(tot ~ 1 + (1|Sted/trans),family="nbinom", data= phen[phen$year.x==2011,])
-M0.12 = glmmadmb(tot ~ 1 + (1|Sted/trans),family="nbinom", data= phen[phen$year.x==2012,])
-
-clim11 = glmmadmb(tot ~  Hum * poly(Temp, 2, raw = T) + (1|Sted/trans), family="nbinom", data= phen[phen$year.x==2011,])
-clim12 = glmmadmb(tot ~  Hum * poly(Temp, 2, raw = T) + (1|Sted/trans), family="nbinom", data= phen[phen$year.x==2012,])
-
-library(splines)
-
-spline11 <- glmmadmb(tot ~ ns(date.x, df=5) * alt.cat + (1|Sted/trans), data=phen[phen$year.x==2011,], family="nbinom")
-spline12 <- glmmadmb(tot ~ ns(date.x, df=5) * alt.cat + (1|Sted/trans), data=phen[phen$year.x==2012,], family="nbinom")
-AIC(spline11)
-AIC(spline12)
-
-        
-        dim(phen[phen$year.y==2011,]$Temp)
-       
-## artial regressions using only fixed effects from the models
-    ## 2011 
-    ## Starting with extracting predicted vectors
-    model.best = spline11
-    newdat.spline11 <- data.frame(date.x=phen[phen$year.x == 2011, ]$date.x, alt.cat = phen[phen$year.x == 2011, ]$alt.cat)
-    mm <- model.matrix(delete.response(terms(model.best)),newdat.spline11)
-    newdat.spline11$tot <-(mm %*% fixef(model.best))
-    
-        model.best = clim11
-    newdat.clim11 <- data.frame(Temp=phen[phen$year.x == 2011, ]$Temp, Hum = phen[phen$year.x == 2011, ]$Hum)
-    mm <- model.matrix(delete.response(terms(model.best)),newdat.clim11)
-    newdat.clim11$tot <-(mm %*% fixef(model.best))
-plot(phen$tot~phen$Temp)
-points(exp(newdat.clim11$tot+3)~newdat.clim11$Temp, col="red")   
-
-
-    model.best = spline12
-    newdat.spline12 <- data.frame(date.x=phen[phen$year.x == 2012, ]$date.x, alt.cat = phen[phen$year.x == 2012, ]$alt.cat)
-    mm <- model.matrix(delete.response(terms(model.best)),newdat.spline12)
-    newdat.spline12$tot <-(mm %*% fixef(model.best))
-    
-    model.best = clim12
-w=c(as.factor(phen[phen$year.x == 2012, ]$w))
-    w[w==1] <-"O"
-    w[w==2] <-"R"
-w
-newdat.clim12 <- data.frame(Temp=phen[phen$year.x == 2012, ]$Temp, Hum = phen[phen$year.x == 2012, ]$Hum)
-    mm <- model.matrix(delete.response(terms(model.best)),newdat.clim12)
-    newdat.clim12$tot <-(mm %*% fixef(model.best))
-        
-summary(comb11<-lm(newdat.spline11$tot ~ newdat.clim11$tot-1))
-summary(comb12<-lm(newdat.spline12$tot ~ newdat.clim12$tot-1))
-    par(mfrow=c(2,2))  
-    plot(comb11)
-    plot(comb12)
-    
-
-
-
-scale.res = function(y,mod)
-{
-  (y-fitted(mod))/sqrt(fitted(mod)+ (fitted(mod))^2)/mod$alpha
-}
-
-(resid(M16))
-sum((phen$tot-fitted(M16))/sqrt(fitted(M16)))
-  
-
-## Plotting temperatures against the predicted vectors for tick abundance 
-## 2011
-par(mfrow = c(2,1))
-
-plot(phen[phen$year.x==2011,]$temp~phen[phen$year.x==2011,]$date.x, main="Temperature and abundance trends 2011", xlab="Time", ylab="temperature", las=1, type="n")
-points(phen[phen$year.x==2011&phen$alt.cat=="high",]$temp~phen[phen$year.x==2011&phen$alt.cat=="high",]$date.x, col="red", pch = 15)
-points(phen[phen$year.x==2011&phen$alt.cat=="low",]$temp~phen[phen$year.x==2011&phen$alt.cat=="low",]$date.x, col = "blue", pch = 25)
-curve(6.5+ 0*x, lty=2, add=T)
-curve(15.5+ 0*x, lty=2, add=T)
-#points(exp(comp.vect11)~phen[phen$year.x==2011,]$date.x)
-model.best = spline11
-newdat <- expand.grid(date.x=c(117:326), alt.cat=c("high","low"))
-mm <- model.matrix(delete.response(terms(model.best)),newdat)
-newdat$tot <-(mm %*% fixef(model.best))
-    
-newdat$tot=exp(newdat$tot)
-par(new=TRUE)
-plot(newdat$date[newdat$alt.cat == "low"&newdat$date>117&newdat$date<326], newdat$tot[newdat$alt.cat == "low"&newdat$date>117&newdat$date<326],, type = "l",col="blue",xaxt="n",yaxt="n",xlab="",ylab="", ylim =c(0,4))
-axis(4)
-lines(newdat$date[newdat$alt.cat == "high"&newdat$date>156&newdat$date<299], newdat$tot[newdat$alt.cat == "high"&newdat$date>156&newdat$date<299], lwd=2, col ="red")
-
-## 2012
-plot(phen[phen$year.x==2012,]$temp~phen[phen$year.x==2012,]$date.x, main="Temperature and abundance trends 2012", xlab="Time", ylab="temperature", las=1, type="n")
-points(phen[phen$year.x==2012&phen$alt.cat=="high",]$temp~phen[phen$year.x==2012&phen$alt.cat=="high",]$date.x, col="red", pch = 15)
-points(phen[phen$year.x==2012&phen$alt.cat=="low",]$temp~phen[phen$year.x==2012&phen$alt.cat=="low",]$date.x, col = "blue", pch=25)
-curve(6.5+ 0*x, lty =2, add=T)
-curve(15.5+ 0*x, lty=2, add=T)
-#points(exp(comp.vect11)~phen[phen$year.x==2011,]$date.x)
-model.best = spline12
-newdat <- expand.grid(date.x=c(482:662), alt.cat=c("high","low"))
-mm <- model.matrix(delete.response(terms(model.best)),newdat)
-newdat$tot <-(mm %*% fixef(model.best))
-newdat$tot=exp(newdat$tot)
-par(new=TRUE)
-plot(newdat$date[newdat$alt.cat == "low"&newdat$date>482&newdat$date<662], newdat$tot[newdat$alt.cat == "low"&newdat$date>482&newdat$date<662],, type = "l",col="blue",xaxt="n",yaxt="n",xlab="",ylab="", ylim =c(0,4), xlim=c(482,662))
-axis(4)
-lines(newdat$date[newdat$alt.cat == "high"&newdat$date>509&newdat$date<649], newdat$tot[newdat$alt.cat == "high"&newdat$date>509&newdat$date<649], lwd=2, col ="red")
-
-legend(620, 4, c("Low - temp", "High - temp", "Low - abund", "High - abund", "Thresholds"),
-       text.col = "black",
-       cex= 0.75,
-       lty = c(NA, NA, 1,1,2), 
-       pch = c(25, 15, NA,NA,NA),
-       col = c("blue", "red", "blue", "red", "black"),
-       bg = "white"                        
-)
-
-dev.copy2pdf(device=x11,
-             #family=c("/home/lars/arial.afm",
-             #"/home/lars/arialbd.afm",
-             #"/home/lars/ariali.afm",
-             #"/home/lars/arialbi.afm"),
-             file = "temp.abund.pdf",
-             paper="special",
-             width=10,
-             height=8,
-            # horizontal=FALSE
-)
-
-#       
-    
-    
-## Plotting temperature spline model.    
-## First, making the plot
-## 2012
-plot(phen$tot~phen$Temp, main="Temperature and abundance trends 2012", ylab="Numbers of ticks", xlab="temperature", las=1, type="n")
-points(phen$tot~phen$Temp, col="red", pch = 15)
-#points(exp(comp.vect11)~phen[phen$year.x==2011,]$date.x)
-model.best = mspline
-newdat <- expand.grid(Temp=(c(0:60)/2))
-mm <- model.matrix(delete.response(terms(model.best)),newdat)
-newdat$tot <-(mm %*% fixef(model.best))
-newdat$tot=exp(newdat$tot+3)
-#par(new=TRUE)
-#plot(newdat$date[newdat$alt.cat == "low"&newdat$date>482&newdat$date<662], newdat$tot[newdat$alt.cat == "low"&newdat$date>482&newdat$date<662],, type = "l",col="blue",xaxt="n",yaxt="n",xlab="",ylab="", ylim =c(0,4), xlim=c(482,662))
-#axis(4)
-lines(newdat$Temp, newdat$tot, lwd=2, col ="red")
-    
-    legend(620, 4, c("Low - temp", "High - temp", "Low - abund", "High - abund", "Thresholds"),
-           text.col = "black",
-           cex= 0.75,
-           lty = c(NA, NA, 1,1,2), 
-           pch = c(25, 15, NA,NA,NA),
-           col = c("blue", "red", "blue", "red", "black"),
-           bg = "white"                        
-    )    
-                                           
-### Ymse småting som må sjekkes
-       phen[phen$tot>0&phen$Temp<5,30:50]
-       sum(phen[phen$Temp<5,]$tot)                                 
-       sum(phen[phen$Temp<5.5,]$tot)                                        
-       sum(phen[phen$Temp<6,]$tot)                                                                            
-       sum(phen[phen$Temp<6.5,]$tick_adult_F)                                                                            
-                                           
-       sum(phen[phen$Temp<7,]$tot)                  
-attach(phen[phen$year==2011,])                                           
-       plot((phen$tick_adult_M + phen$tick_adult_F)/phen$tick_nymph~phen$date.x)  
-summary(testmod <- glmmadmb(I(phen$tick_adult_M + phen$tick_adult_F) ~phen$tick_nymph,family="nbinom"))
-                                           
-detach(phen[phen$year==2011,])           
-                                           
-cor.test((phen$tick_adult_M + phen$tick_adult_F), phen$tick_nymph, method = "kendall")
-
-                                           names(phenuc)
-        phen$trans<- as.factor(phen$trans)
-        w = (phen$tick_adult_M + phen$tick_adult_F)
-phen = cbind(phen,w)        
-
-
-        dim(cbind(phen[phen$year.y==2011,]$tick_nymph,phen[phen$year.y==2011,]$w))
-     q = (phen[phen$year.y==2011,]$Temp)
-        names(phen)
-        
-        
-        
-        dim(phen[phen$year.y==2011,]$Temp)
-        
-
-summary(M23B)                                           
-plot((phen$tot)~(phen$Temp))
-curve(((M23B$b[1]+1) + M23B$b[3]*x), from = 0, to = 10, add=T)                                           
-curve(((M23B$b[1] + M23B$b[2]+) + (M23B$b[1] + M23B$b[6])*x), from = log(10), to = 30, add=T)                                    
-load("25.11.climateworkspace.RData") 
-
-nrow(phen)
-nrow(phenuc)
-
-
-plot(phen$temp, phen$tot)
-
-
-dev.copy2eps(device=x11,
-             file = "tull.eps",
-             #paper="special",
-             #width=10,
-             #height=8,
-             #horizontal=FALSE
-)
-
-
 save(list=ls(all=T), file="~/uio/phenology/01.12.climateworkspace.RData")
+load("~/uio/phenology/01.12.climateworkspace.RData")
