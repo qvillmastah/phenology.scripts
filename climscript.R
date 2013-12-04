@@ -1,13 +1,11 @@
 ## Removing previous object in the R-session
 rm(list = ls(all= TRUE))
-setwd("~/uio/phenology")
-load("~/uio/phenology/01.12.climateworkspace.RData")
+#setwd("~/uio/phenology")
+#load("~/uio/phenology/01.12.climateworkspace.RData")
 
 ## loding extra libraries I need for the following analyses
 library(glmmADMB)
 library(splines)
-library(splines)  
-library(lme4) 
 library(mgcv)
 
 source("~/uio/phenology/phenology.scripts/data.R", echo=T)
@@ -262,13 +260,13 @@ legend(attt[6], 4, c("Low 2011", "Low 2012", "High 2011", "High 2012"),
         bg = "white"                        
 )
 dev.copy2eps(device=x11,
-file = "~/uio/phenology/figures/trend.no.weather.eps",
+file = "~/uio/phenology/figures/Figure2.eps",
 paper="special",
         width=10,
         height=7,
 		)
 dev.copy2eps(device=x11,
-file = "~/uio/phenology/figures/trend.no.weather.pdf",
+file = "~/uio/phenology/figuresFigure2.pdf",
 paper="special",
         width=10,
         height=7,
